@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+env/
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Environment Variables
+.env
+.env.*
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Model Checkpoints
+checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+
+# Data
+data/raw/*
+data/processed/*
+data/indexes/*
+
+# Keep folder structure
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/indexes/.gitkeep
+
+# FAISS
+*.index
+*.faiss
+
+# Audio Files
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+
+# HuggingFace Cache
+.cache/
+huggingface/
+hf_cache/
+
+# Torch
+torch_cache/
+
+# TensorBoard
+runs/
+events.out.tfevents.*
+
+# Coverage
+.coverage
+coverage.xml
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+
+# OS Files
+Thumbs.db
