@@ -1,0 +1,8 @@
+hubert:
+  model_name: facebook/hubert-base-ls960
+
+rmvpe:
+  sample_rate: 16000
+
+vits:
+  hidden_size: 768
