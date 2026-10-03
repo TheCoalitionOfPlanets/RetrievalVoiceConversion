@@ -12,7 +12,6 @@ class HubertExtractor(
 ):
 
     def load(self):
-
         print("Loading HuBERT")
 
     def extract(
