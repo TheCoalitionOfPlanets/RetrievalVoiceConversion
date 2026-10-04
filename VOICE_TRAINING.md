@@ -29,68 +29,113 @@ contributes general speech structure; your recordings only need to supply
 *your timbre*. That is why ~15 minutes is enough rather than many hours, and why
 this is feasible on a 4 GB card at all.
 
-## Step 1 — record
+## The whole sequence, start to finish
 
 ```sh
-./scripts/record_voice.sh                 # -> data/raw/myvoice/, 12s takes
-./scripts/record_voice.sh data/raw/myvoice 15   # longer takes
+# 0. plug in a headset or external mic (NOT the laptop's built-in — see below)
+
+# 1. record. ENTER starts a take, ENTER stops it, r redoes it, q quits.
+#    Resumable: re-run any time to continue where you left off.
+./scripts/record_voice.sh
+
+# 2. verify BEFORE spending GPU time. Catches a narrow-band mic, clipping,
+#    levels that are too low, and not enough material.
+uv run python scripts/check_voice.py data/raw/myvoice
+
+# 3. clear the old p247 artifacts, or they get trained alongside you
+rm -rf data/processed/* data/indexes/* data/checkpoints/*
+
+# 4. confirm exactly one speaker will be picked up
+ls data/raw/            # must print only: myvoice
+
+# 5. extract HuBERT content + F0      (~5-10 min on CPU/GPU for 15 min audio)
+uv run python scripts/preprocess.py
+
+# 6. sanity-check the speaker map before the long run
+cat data/processed/speakers.json      # must read exactly {"myvoice": 0}
+
+# 7. build the FAISS retrieval index   (fast, under a minute)
+uv run python scripts/build_index.py
+
+# 8. fine-tune from the 32 kHz pretrained base   (the long one)
+uv run python scripts/train.py
+
+# 9. convert something into your voice
+uv run python scripts/infer.py --input source.wav --output converted.wav
 ```
 
-ENTER records a take, then ENTER keeps it or `r` redoes it. Stop any time with
-`q`; re-running continues where you left off. Prompts come from
-`scripts/prompts.txt` (40 phonetically varied sentences — they cover a wide
-phoneme range, which matters more than total minutes).
+Steps 5-8 can be run as one command once you trust them:
+
+```sh
+uv run python scripts/run_pipeline.py
+```
+
+Watch training in a second terminal:
+
+```sh
+uv run tensorboard --logdir data/logs
+```
+
+Training resumes from the newest checkpoint in `data/checkpoints/`, so Ctrl-C
+is safe — you lose at most the epochs since the last save (`save_every_epoch: 5`
+in `config/train.yaml`).
+
+## Step 1 in detail — recording
+
+`./scripts/record_voice.sh` prints a paragraph, you press ENTER, read it aloud,
+press ENTER again to stop. It tracks a running total against a 15-minute goal
+and shows a progress bar.
+
+```sh
+./scripts/record_voice.sh                      # default: data/raw/myvoice
+GOAL_MIN=20 ./scripts/record_voice.sh          # aim for 20 minutes instead
+PROMPTS=my_own_text.txt ./scripts/record_voice.sh   # your own paragraphs
+```
+
+Prompts live in `scripts/prompts.txt` — 20 paragraphs, blank-line separated,
+chosen to spread across a wide phoneme range (plus numbers, questions, and
+tongue-twisters). The list cycles once exhausted; **re-reading the same
+paragraph is fine.** The model learns timbre, not text.
 
 What actually determines quality:
 
-- **15–30 minutes.** Below ~10 min the voice stays generic. Past ~30 min returns
+- **15-30 minutes.** Below ~10 min the voice stays generic. Past ~30 min returns
   flatten fast.
 - **One mic, one distance, one room, one session.** Consistency beats quantity.
-  Varying mic distance teaches the model that your timbre is inconsistent.
+  Varying mic distance teaches the model your timbre is inconsistent.
 - **Dead silence between phrases** — no fan, keyboard, traffic, music, or a TV
-  two rooms away. The silence splitter cuts on quiet, so background noise
-  silently becomes part of "your voice".
-- **Use a headset or external mic, not the laptop's built-in.** `arecord -l`
-  shows a `DMIC16kHz` device on this machine — a 16 kHz capture has nothing
-  above 8 kHz, and a 32 kHz model trained on it sounds permanently muffled.
-- **Match your intended use.** Converting singing? Record some singing. The
-  model can only reproduce a pitch range it has heard.
+  two rooms away. The splitter cuts on quiet, so background noise silently
+  becomes part of "your voice".
+- **Not the laptop's built-in mic.** `arecord -l` shows a `DMIC16kHz` device on
+  this machine. A 16 kHz capture has nothing above 8 kHz, and a 32 kHz model
+  trained on it sounds permanently muffled no matter how long you train.
+- **Match your intended use.** Converting singing? Record singing. The model
+  cannot reproduce a pitch range it has never heard.
 - Speak normally. Don't perform, don't whisper, don't shout.
 
-## Step 2 — verify before you burn GPU hours
+## Step 2 in detail — verifying
 
 ```sh
 uv run python scripts/check_voice.py data/raw/myvoice
 ```
 
-Reports duration, clipping, level, and **real captured bandwidth** — that last
-one catches the 16 kHz-mic trap, which is invisible until the model finishes and
-sounds wrong. For reference, `data/reference/p247` scores ~19.2 kHz.
+Reports duration, clipping, levels, and **real captured bandwidth**. That last
+number is the one that matters — it catches the narrow-mic trap, which is
+otherwise invisible until training finishes and the output sounds wrong.
+`data/reference/p247` scores ~19.2 kHz; anything under ~7 kHz is a bad mic.
 
-## Step 3 — preprocess, index, train
+Fix whatever it flags and re-run before moving on.
 
-`data/processed/` currently holds **p247** features. Clear them, or the old
-speaker is trained alongside yours:
+## If something goes wrong
 
-```sh
-rm -rf data/processed/* data/indexes/*
-
-uv run python scripts/preprocess.py        # reads data/raw/ by default
-uv run python scripts/build_index.py
-uv run python scripts/train.py
-```
-
-Confirm `data/processed/speakers.json` reads `{"myvoice": 0}` and nothing else
-before starting a long run.
-
-## Step 4 — convert
-
-```sh
-uv run python scripts/infer.py --input some_source.wav --output converted.wav
-```
-
-Use `--pitch-shift` in semitones when source and target ranges differ — roughly
-+12 for a male source into a female target, -12 the other way.
+| symptom | cause |
+|---|---|
+| CUDA out of memory | lower `batch_size` or `segment_size` in `config/train.yaml` (4 GB card) |
+| `speakers.json` has 2+ entries | an extra folder in `data/raw/` — remove it, re-run preprocess |
+| output sounds muffled | narrow-band mic; check step 2 |
+| output sounds like p247 | stale `data/processed/` — you skipped step 3 |
+| output pitch is wrong | use `--pitch-shift` semitones at step 9 (±12 crosses male/female) |
+| "No usable samples" | clips too short, or `data/raw/` empty |
 
 ## Keep `data/raw/` to exactly one folder
 
