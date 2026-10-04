@@ -61,7 +61,7 @@ uv run python scripts/build_index.py
 uv run python scripts/train.py
 
 # 9. convert something into your voice
-uv run python scripts/infer.py --input source.wav --output converted.wav
+uv run python scripts/infer.py --input source.wav --output converted.wav --pitch 0
 ```
 
 Steps 5-8 can be run as one command once you trust them:
@@ -134,7 +134,7 @@ Fix whatever it flags and re-run before moving on.
 | `speakers.json` has 2+ entries | an extra folder in `data/raw/` — remove it, re-run preprocess |
 | output sounds muffled | narrow-band mic; check step 2 |
 | output sounds like p247 | stale `data/processed/` — you skipped step 3 |
-| output pitch is wrong | use `--pitch-shift` semitones at step 9 (±12 crosses male/female) |
+| output pitch is wrong | use `--pitch` semitones at step 9 (±12 crosses male/female) |
 | "No usable samples" | clips too short, or `data/raw/` empty |
 
 ## Keep `data/raw/` to exactly one folder
