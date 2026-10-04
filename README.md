@@ -101,7 +101,7 @@ and feed only the vocal stem.
 ### Layout
 
 ```
-data/target/<speaker-name>/*.wav      # any nesting; folder name = speaker
+data/raw/<speaker-name>/*.wav         # any nesting; folder name = speaker
 ```
 
 A single folder of files directly under the root also works and is treated as
@@ -109,25 +109,17 @@ one speaker.
 
 ### What is already here
 
-`data/DATASET.md` documents a staged VCTK 0.92 corpus (48 kHz, mic1 only):
+`data/DATASET.md` documents a staged VCTK 0.92 corpus (48 kHz, mic1 only).
+The training target is in place and ready to preprocess:
 
-| speaker | duration |
-|---|---|
-| p247 | 15.6 min |
-| p318 | 14.3 min |
-| p251 | 13.0 min |
-| p334 | 12.9 min |
-| p360 | 12.0 min |
-| p225 | 9.3 min *(currently linked into `data/target/`)* |
-
-**p247 (15.6 min) is the better training target** — p225 is the conventional
-VCTK benchmark speaker but is one of the shortest, and 9.3 min sits at the low
-edge of the usable range. To switch:
-
-```sh
-rm -rf data/target/* && mkdir -p data/target/p247
-ln -f data/vctk/p247/*.wav data/target/p247/
 ```
+data/raw/p247/     475 utterances, 15.6 min, 48 kHz
+```
+
+p247 was chosen over the conventional benchmark speaker p225 because p225 holds
+only 231 utterances (9.3 min), which sits at the low edge of the usable range.
+See `data/DATASET.md` for provenance, the mic1-only rationale, and how to swap
+in a different speaker.
 
 ---
 
@@ -155,7 +147,7 @@ them works but needs an order of magnitude more audio.
 ### 1. Preprocess — slice, extract HuBERT features and F0
 
 ```sh
-uv run python scripts/preprocess.py --raw data/target --device cuda
+uv run python scripts/preprocess.py --raw data/raw --device cuda
 ```
 
 Writes `data/processed/{wavs,features,f0,f0_coarse}/`, `filelist.txt` and
@@ -197,7 +189,7 @@ against clarity.
 ### Everything at once
 
 ```sh
-uv run python scripts/run_pipeline.py --raw data/target --device cuda
+uv run python scripts/run_pipeline.py --raw data/raw --device cuda
 ```
 
 ### Tests
