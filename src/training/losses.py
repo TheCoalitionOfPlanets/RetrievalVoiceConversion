@@ -32,8 +32,8 @@ def discriminator_loss(
         g_loss = torch.mean(dg**2)
 
         loss += r_loss + g_loss
-        r_losses.append(float(r_loss))
-        g_losses.append(float(g_loss))
+        r_losses.append(float(r_loss.detach()))
+        g_losses.append(float(g_loss.detach()))
 
     return loss, r_losses, g_losses
 
@@ -46,7 +46,7 @@ def generator_loss(disc_outputs: list) -> tuple[torch.Tensor, list[float]]:
         dg = dg.float()
         current = torch.mean((1 - dg) ** 2)
 
-        gen_losses.append(float(current))
+        gen_losses.append(float(current.detach()))
         loss += current
 
     return loss, gen_losses

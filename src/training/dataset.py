@@ -186,7 +186,7 @@ class DistributedBucketSampler(torch.utils.data.Sampler):
         boundaries: list[int] | None = None,
         shuffle: bool = True,
     ):
-        super().__init__(dataset)
+        super().__init__()
 
         self.lengths = dataset.lengths
         self.batch_size = batch_size
