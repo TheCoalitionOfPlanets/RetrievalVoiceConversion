@@ -55,8 +55,14 @@ total_secs() {
 mapfile -t PARAS < <(awk 'BEGIN{RS=""} {gsub(/\n/," "); gsub(/  +/," "); print}' "$PROMPTS")
 [ "${#PARAS[@]}" -gt 0 ] || { echo "no paragraphs in $PROMPTS" >&2; exit 1; }
 
-n=0
-while [ -e "$(printf '%s/clip_%03d.wav' "$OUT" "$n")" ]; do n=$((n+1)); done
+# Next free slot. Called after every take: deleting clips mid-sequence leaves
+# gaps, and a blind n+1 would land on — and overwrite — an existing good clip.
+next_free() {
+    local i=0
+    while [ -e "$(printf '%s/clip_%03d.wav' "$OUT" "$i")" ]; do i=$((i+1)); done
+    echo "$i"
+}
+n=$(next_free)
 
 goal=$((GOAL_MIN * 60))
 t=$(total_secs)
@@ -100,7 +106,7 @@ while true; do
     read -r k </dev/tty
     if [ "$k" = "r" ]; then rm -f "$f"; echo "  redoing."; echo; continue; fi
 
-    n=$((n + 1))
+    n=$(next_free)
     echo
 done
 

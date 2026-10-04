@@ -10,6 +10,18 @@ import librosa
 import numpy as np
 
 
+def clipped_fraction(y: np.ndarray, limit: float = 0.995, minrun: int = 3) -> float:
+    """Fraction of samples sitting in a run of `minrun`+ pinned samples."""
+    mask = np.abs(y) > limit
+    if not mask.any():
+        return 0.0
+    edges = np.diff(np.concatenate(([0], mask.view(np.int8), [0])))
+    starts = np.where(edges == 1)[0]
+    ends = np.where(edges == -1)[0]
+    lengths = ends - starts
+    return float(lengths[lengths >= minrun].sum()) / y.size
+
+
 def main() -> int:
     root = Path(sys.argv[1] if len(sys.argv) > 1 else "data/raw/myvoice")
     files = sorted(p for p in root.rglob("*") if p.suffix.lower() in {".wav", ".flac"})
@@ -21,6 +33,7 @@ def main() -> int:
     total = 0.0
     clipped = quiet = 0
     rolloffs: list[float] = []
+    worst: list[tuple[float, str]] = []
 
     for p in files:
         y, sr = librosa.load(str(p), sr=None, mono=True)
@@ -29,8 +42,11 @@ def main() -> int:
         total += y.size / sr
 
         peak = float(np.abs(y).max())
-        if peak > 0.99:
+        # A lone sample touching the ceiling is harmless. Real clipping is
+        # flat-topping: runs of consecutive samples pinned at the limit.
+        if clipped_fraction(y) > 0.0005:
             clipped += 1
+            worst.append((clipped_fraction(y), p.name))
         if peak < 0.05:
             quiet += 1
 
@@ -64,8 +80,15 @@ def main() -> int:
         ok = False
     elif band < 11000:
         print(f"! bandwidth ~{band/1000:.1f} kHz is on the low side for a 32 kHz model.")
-    if clipped > len(files) * 0.05:
-        print(f"! {clipped} clipped files — lower the input gain and redo those.")
+    if clipped:
+        print(f"! {clipped} of {len(files)} files are genuinely clipped "
+              "(flat-topped peaks — permanent distortion, cannot be repaired).")
+        print("  Lower the mic gain, then delete and re-record just these:")
+        for frac, name in sorted(worst, reverse=True)[:15]:
+            print(f"      {name}   {frac*100:.3f}% pinned")
+        if len(worst) > 15:
+            print(f"      ... and {len(worst)-15} more")
+        print("  Gain:  pactl set-source-volume @DEFAULT_SOURCE@ 70%")
         ok = False
     if quiet > len(files) * 0.2:
         print(f"! {quiet} very quiet files — move closer or raise gain.")
