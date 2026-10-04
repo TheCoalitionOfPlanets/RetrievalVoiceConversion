@@ -6,8 +6,8 @@ seed: 1234
 data:
   processed_dir: data/processed
   filelist: data/processed/filelist.txt
-  min_frames: 60
-  max_frames: 900
+  min_frames: 60            # ~0.6 s — shorter clips carry too little content
+  max_frames: 500           # ~5 s — caps the O(T^2) attention cost at ~2.9 GB
 
 training:
   epochs: 300
@@ -18,7 +18,6 @@ training:
   eps: 1.0e-9
   lr_decay: 0.999875
   fp16: true
-  grad_accum_steps: 2
   max_grad_norm: null
   num_workers: 2
 

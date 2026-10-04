@@ -140,7 +140,6 @@ class OptimConfig:
     eps: float = 1e-9
     lr_decay: float = 0.999875
     fp16: bool = True
-    grad_accum_steps: int = 1
     max_grad_norm: float | None = None
     num_workers: int = 2
 
