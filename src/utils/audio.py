@@ -118,27 +118,60 @@ def split_on_silence(
     min_seconds: float = 0.5,
     max_seconds: float = 4.0,
 ) -> list[np.ndarray]:
-    """Prefer cutting at silences; fall back to fixed chunks when too long."""
+    """Cut at silences, merging neighbours into utterance-sized chunks.
+
+    Voiced runs are often far shorter than `min_seconds` — individual syllables
+    land around 0.3 s. Emitting them alone would discard most of a corpus, so
+    consecutive runs (and the natural pauses between them) are accumulated
+    until the chunk is long enough, and only then released.
+    """
 
     intervals = librosa.effects.split(waveform, top_db=top_db)
+
+    if len(intervals) == 0:
+        return []
+
     limit = int(max_seconds * sample_rate)
     minimum = int(min_seconds * sample_rate)
 
     pieces: list[np.ndarray] = []
+    start: int | None = None
+    end: int | None = None
 
-    for start, end in intervals:
+    def flush() -> None:
+        if start is None or end is None:
+            return
+
         segment = waveform[start:end]
 
-        if segment.size < minimum:
-            continue
-
-        if segment.size <= limit:
+        if segment.size >= minimum:
             pieces.append(segment)
+
+    for interval_start, interval_end in intervals:
+        if start is None:
+            start, end = int(interval_start), int(interval_end)
             continue
 
-        pieces.extend(
+        # Extending past the limit: close the current chunk and open a new one.
+        if int(interval_end) - start > limit:
+            flush()
+            start, end = int(interval_start), int(interval_end)
+        else:
+            end = int(interval_end)
+
+    flush()
+
+    # A single uninterrupted run can still exceed the limit; hard-cut those.
+    final: list[np.ndarray] = []
+
+    for piece in pieces:
+        if piece.size <= limit:
+            final.append(piece)
+            continue
+
+        final.extend(
             slice_audio(
-                segment,
+                piece,
                 sample_rate,
                 chunk_seconds=max_seconds,
                 overlap_seconds=0.0,
@@ -146,7 +179,7 @@ def split_on_silence(
             )
         )
 
-    return pieces
+    return final
 
 
 def rms_match(

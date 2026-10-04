@@ -183,3 +183,35 @@ def test_audio_slicing_produces_bounded_chunks():
     assert len(chunks) > 1
     assert all(c.size <= 3 * 16000 for c in chunks)
     assert all(c.size >= 0.5 * 16000 for c in chunks)
+
+
+def test_short_voiced_runs_are_merged_not_discarded():
+    """Syllable-length runs must survive; dropping them empties a corpus."""
+
+    from src.utils.audio import split_on_silence
+
+    sr = 16000
+    rng = np.random.default_rng(4)
+
+    # 0.3 s of tone / 0.1 s of silence, repeated — every run is under min_seconds.
+    tone = np.sin(
+        2 * np.pi * 200 * np.linspace(0, 0.3, int(0.3 * sr), endpoint=False)
+    ).astype(np.float32)
+    gap = (1e-5 * rng.standard_normal(int(0.1 * sr))).astype(np.float32)
+
+    waveform = np.concatenate([np.concatenate([tone, gap]) for _ in range(20)])
+
+    pieces = split_on_silence(waveform, sr, min_seconds=0.5, max_seconds=4.0)
+
+    assert pieces, "short runs must be merged into usable chunks"
+    assert all(p.size >= 0.5 * sr for p in pieces)
+    assert all(p.size <= 4.0 * sr for p in pieces)
+
+    kept = sum(p.size for p in pieces) / waveform.size
+    assert kept > 0.5, f"only {kept:.0%} of the audio survived slicing"
+
+
+def test_silence_only_input_yields_nothing():
+    from src.utils.audio import split_on_silence
+
+    assert split_on_silence(np.zeros(16000, dtype=np.float32), 16000) == []
