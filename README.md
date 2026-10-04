@@ -109,17 +109,19 @@ one speaker.
 
 ### What is already here
 
-`data/DATASET.md` documents a staged VCTK 0.92 corpus (48 kHz, mic1 only).
-The training target is in place and ready to preprocess:
+The training root `data/raw/` is where **your** voice goes — see
+**`VOICE_TRAINING.md`** for the recording workflow (`scripts/record_voice.sh`,
+`scripts/check_voice.py`) and what makes a take usable.
 
-```
-data/raw/p247/     475 utterances, 15.6 min, 48 kHz
-```
+A VCTK speaker (`p247`, 475 utterances, 15.6 min, 48 kHz) sits in
+`data/reference/p247/` — deliberately *outside* the training root so it cannot
+leak into a run. It was the stand-in used to prove this pipeline end to end, and
+it doubles as clean source audio to convert once you have a model.
+`data/DATASET.md` documents its provenance.
 
-p247 was chosen over the conventional benchmark speaker p225 because p225 holds
-only 231 utterances (9.3 min), which sits at the low edge of the usable range.
-See `data/DATASET.md` for provenance, the mic1-only rationale, and how to swap
-in a different speaker.
+Remember what the split means: whatever is under `data/raw/` is the voice the
+model *becomes*; anything you pass to `scripts/infer.py` only supplies content
+and pitch.
 
 ---
 

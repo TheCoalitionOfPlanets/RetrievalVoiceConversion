@@ -5,14 +5,21 @@ A single-speaker slice, sized for a disk-constrained laptop. **87 MB on disk.**
 ## What is here
 
 ```
-data/raw/p247/p247_<utt>_mic1.wav   # 475 utterances, 15.6 min, 48 kHz
+data/reference/p247/p247_<utt>_mic1.wav   # 475 utterances, 15.6 min, 48 kHz
 ```
 
-`data/raw/` is the default root for `scripts/preprocess.py`, so no flags needed:
+**This is reference audio, not the training target.** It lives outside
+`data/raw/` on purpose. p247 was a VCTK stand-in used to prove the pipeline end
+to end; the actual target voice is the user's own recording in
+`data/raw/myvoice/` — see [`VOICE_TRAINING.md`](../VOICE_TRAINING.md).
+
+Keep it for smoke-testing preprocess/train without touching the real target:
 
 ```sh
-uv run python scripts/preprocess.py
+uv run python scripts/preprocess.py --raw data/reference
 ```
+
+Delete `data/reference/` to reclaim 87 MB once the pipeline is trusted.
 
 | | |
 |---|---|
@@ -74,12 +81,13 @@ uv venv /tmp/vctk-env --python 3.12
 uv pip install --python /tmp/vctk-env/bin/python pyarrow huggingface_hub
 
 /tmp/vctk-env/bin/python scripts/fetch_vctk.py \
-  --out data/raw --mic mic1 --shards 22 --only p225 \
+  --out data/reference --mic mic1 --shards 22 --only p225 \
   --work /tmp/vctk-work --state /tmp/vctk-work/state.json
 ```
 
 Each shard is ~482 MB and takes 1-2 min. The fetch is resumable via `--state`.
 
-**Keep `data/raw/` to one speaker folder** — `build_speaker_map` treats every
-subdirectory as a separate speaker, so a stray folder silently turns a
-single-target fine-tune into a two-speaker run.
+**Never fetch into `data/raw/`** while a real target voice is set up there.
+`build_speaker_map` treats every subdirectory as a separate speaker, so an extra
+folder silently turns a single-voice fine-tune into a two-speaker run that
+sounds like neither. Fetch into `data/reference/` instead.
