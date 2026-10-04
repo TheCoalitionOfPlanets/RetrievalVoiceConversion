@@ -69,7 +69,7 @@ class GeneratorConfig:
     )
     upsample_rates: list[int] = field(default_factory=lambda: [10, 8, 2, 2])
     upsample_initial_channel: int = 512
-    upsample_kernel_sizes: list[int] = field(default_factory=lambda: [16, 16, 4, 4])
+    upsample_kernel_sizes: list[int] = field(default_factory=lambda: [20, 16, 4, 4])
     spk_embed_dim: int = 109
     gin_channels: int = 256
 

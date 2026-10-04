@@ -49,6 +49,7 @@ data/processed/*
 data/indexes/*
 data/checkpoints/*
 data/logs/*
+data/pretrained/*
 
 # Keep folder structure
 !data/raw/.gitkeep

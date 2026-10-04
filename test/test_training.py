@@ -215,3 +215,34 @@ def test_collate_pads_and_sorts_by_length():
     assert list(spec_lengths) == [30, 20, 10]
     assert list(content_lengths) == [30, 20, 10]
     assert list(wav_lengths) == [30 * 320, 20 * 320, 10 * 320]
+
+
+def test_upsample_kernels_are_pretrained_compatible():
+    """These kernel sizes are what let official RVC v2 32k weights load.
+
+    Changing them silently breaks transfer learning, which is the difference
+    between needing ~30 minutes of audio and needing tens of hours.
+    """
+
+    from src.utils.config import load_model_config
+
+    model = load_model_config("config/model.yaml")
+    gen = model.generator
+
+    assert gen.upsample_rates == [10, 8, 2, 2]
+    assert gen.upsample_kernel_sizes == [20, 16, 4, 4]
+    assert gen.gin_channels == 256
+    assert gen.spk_embed_dim == 109
+
+    # Each transposed conv must preserve the exact upsampling factor.
+    for rate, kernel in zip(gen.upsample_rates, gen.upsample_kernel_sizes):
+        padding = (kernel - rate) // 2
+
+        assert (kernel - rate) % 2 == 0, (
+            f"kernel {kernel} and rate {rate} give fractional padding"
+        )
+
+        length_in = 50
+        length_out = (length_in - 1) * rate - 2 * padding + kernel
+
+        assert length_out == length_in * rate

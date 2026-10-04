@@ -29,10 +29,14 @@ checkpoint:
   dir: data/checkpoints
   save_every_epoch: 5
   keep_last: 3
-  pretrained_g: null
-  pretrained_d: null
+  # Official RVC v2 32k base models — load these unless you have 10+ hours of
+  # audio. They make ~30 min of a single speaker enough. Fetch with:
+  #   hf download lj1995/VoiceConversionWebUI pretrained_v2/f0G32k.pth \
+  #     pretrained_v2/f0D32k.pth --local-dir data/pretrained
+  pretrained_g: data/pretrained/pretrained_v2/f0G32k.pth
+  pretrained_d: data/pretrained/pretrained_v2/f0D32k.pth
 
 logging:
   log_dir: data/logs
-  log_every_steps: 50
+  log_every_steps: 5
   eval_every_epoch: 10
