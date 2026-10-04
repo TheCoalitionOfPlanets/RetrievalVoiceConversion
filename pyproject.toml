@@ -1,17 +1,33 @@
 [project]
 name = "rvc"
 version = "0.1.0"
-description = "Add your description here"
+description = "Retrieval-based Voice Conversion"
 readme = "README.md"
 authors = [
     { name = "PRIEYAN", email = "mnprieyan@gmail.com" }
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "torch>=2.9",
+    "torchaudio>=2.9",
+    "transformers>=4.45",
+    "librosa>=0.10",
+    "soundfile>=0.12",
+    "pyworld>=0.3.4",
+    "faiss-cpu>=1.8",
+    "scipy>=1.14",
+    "numpy>=1.26",
+    "tensorboard>=2.17",
+    "tqdm>=4.66",
     "pytest>=9.1.1",
     "pyyaml>=6.0.3",
     "rich>=15.0.0",
+    # pyworld 0.3.5 imports pkg_resources, dropped in setuptools 81
+    "setuptools>=70,<81",
 ]
+
+[project.optional-dependencies]
+crepe = ["torchcrepe>=0.0.23"]
 
 [project.scripts]
 rvc = "rvc:main"
@@ -19,3 +35,6 @@ rvc = "rvc:main"
 [build-system]
 requires = ["uv_build>=0.12.22,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["test"]

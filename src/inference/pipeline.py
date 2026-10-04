@@ -5,5 +5,5 @@ from abc import abstractmethod
 class BasePipeline(ABC):
 
     @abstractmethod
-    def run(self):
+    def run(self, *args, **kwargs):
         pass

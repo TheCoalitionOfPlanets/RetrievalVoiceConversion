@@ -11,8 +11,5 @@ class BaseFeatureExtractor(ABC):
         pass
 
     @abstractmethod
-    def extract(
-        self,
-        audio: AudioData
-    ):
+    def extract(self, audio: AudioData):
         pass

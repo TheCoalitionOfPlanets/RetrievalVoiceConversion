@@ -1,7 +1,39 @@
-epochs: 100
+# Training configuration tuned for a single 4 GB GPU (RTX 3050 Laptop).
+# Raise batch_size / segment_size if you move to a larger card.
 
-batch_size: 4
+seed: 1234
 
-learning_rate: 0.0001
+data:
+  processed_dir: data/processed
+  filelist: data/processed/filelist.txt
+  min_frames: 60
+  max_frames: 900
 
-save_every: 10
+training:
+  epochs: 300
+  batch_size: 4
+  segment_size: 12800        # samples -> 40 frames at hop 320
+  learning_rate: 0.0001
+  betas: [0.8, 0.99]
+  eps: 1.0e-9
+  lr_decay: 0.999875
+  fp16: true
+  grad_accum_steps: 2
+  max_grad_norm: null
+  num_workers: 2
+
+loss:
+  c_mel: 45.0
+  c_kl: 1.0
+
+checkpoint:
+  dir: data/checkpoints
+  save_every_epoch: 5
+  keep_last: 3
+  pretrained_g: null
+  pretrained_d: null
+
+logging:
+  log_dir: data/logs
+  log_every_steps: 50
+  eval_every_epoch: 10

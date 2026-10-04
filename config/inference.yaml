@@ -1,3 +1,21 @@
 device: auto
 
-sample_rate: 16000
+model:
+  checkpoint: data/checkpoints/G_latest.pth
+  config: config/model.yaml
+
+index:
+  path: data/indexes/speaker.index
+  features: data/indexes/speaker_features.npy
+  rate: 0.75
+  k: 8
+
+conversion:
+  speaker_id: 0
+  pitch_shift: 0
+  f0_method: harvest
+  protect: 0.33
+  rms_mix_rate: 0.25
+  output_sample_rate: 32000
+  chunk_seconds: 30.0
+  crossfade_seconds: 0.1
