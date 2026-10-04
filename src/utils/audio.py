@@ -9,6 +9,9 @@ from src.utils.exceptions import AudioLoadError
 
 AUDIO_SUFFIXES = (".wav", ".flac", ".mp3", ".m4a", ".ogg", ".opus", ".aac")
 
+# Below this peak amplitude a clip carries no usable signal (~ -80 dBFS).
+SILENCE_FLOOR = 1e-4
+
 
 class AudioLoader:
 
@@ -125,6 +128,11 @@ def split_on_silence(
     consecutive runs (and the natural pauses between them) are accumulated
     until the chunk is long enough, and only then released.
     """
+
+    # top_db is relative to the clip's own peak, so a silent or corrupt file
+    # reads as one continuous "loud" region. Reject it on absolute energy.
+    if waveform.size == 0 or float(np.abs(waveform).max()) < SILENCE_FLOOR:
+        return []
 
     intervals = librosa.effects.split(waveform, top_db=top_db)
 

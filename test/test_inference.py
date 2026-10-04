@@ -211,7 +211,17 @@ def test_short_voiced_runs_are_merged_not_discarded():
     assert kept > 0.5, f"only {kept:.0%} of the audio survived slicing"
 
 
-def test_silence_only_input_yields_nothing():
+@pytest.mark.parametrize(
+    "waveform",
+    [
+        np.zeros(16000, dtype=np.float32),
+        (1e-6 * np.random.default_rng(0).standard_normal(16000)).astype(np.float32),
+    ],
+    ids=["digital_silence", "dither_only"],
+)
+def test_silent_input_yields_nothing(waveform):
+    """A relative threshold alone would turn a dead file into training data."""
+
     from src.utils.audio import split_on_silence
 
-    assert split_on_silence(np.zeros(16000, dtype=np.float32), 16000) == []
+    assert split_on_silence(waveform, 16000) == []
