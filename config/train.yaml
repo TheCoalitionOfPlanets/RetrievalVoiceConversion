@@ -38,5 +38,5 @@ checkpoint:
 
 logging:
   log_dir: data/logs
-  log_every_steps: 5
+  log_every_steps: 50
   eval_every_epoch: 10

@@ -37,13 +37,31 @@ the on-disk footprint.
 ## Layout
 
 ```
-data/vctk/<speaker>/<speaker>_<utt>_mic1.wav   # full corpus, staging
-data/raw/p225/<utt>.wav                        # the fine-tune target
+data/vctk/<speaker>/<speaker>_<utt>_mic1.wav   # full corpus, staging (source of truth)
+data/target/p225/<utt>.wav                     # the fine-tune target (hardlinks)
 ```
 
-`data/raw/` is the root `scripts/preprocess.py` reads by default, and it holds
-**only the target speaker**. `data/vctk/` is staging — it is deliberately
-outside `data/raw/` so a preprocess run does not pick up all 109 speakers.
+`data/target/` holds **only the target speaker** and is the root to preprocess:
+
+```sh
+uv run python scripts/preprocess.py --raw data/target
+```
+
+**Why not `data/raw/`?** That is the default root, but it is currently occupied
+by a `testvoice/` smoke-test fixture belonging to another working session. Two
+speaker folders under one root make `build_speaker_map` emit a two-speaker map,
+which would mix synthetic test clips into a real training run. `data/target/`
+keeps the two apart. If `testvoice/` is gone and you want the default path back:
+
+```sh
+mkdir -p data/raw/p225 && ln -f data/vctk/p225/*.wav data/raw/p225/
+```
+
+`data/vctk/` is staging, deliberately outside both, so no preprocess run picks
+up all 109 speakers by accident.
+
+Every file under `data/target/` is a **hardlink** into `data/vctk/`, so the
+target costs no extra disk and switching targets is free.
 
 ## Target speaker
 
@@ -54,9 +72,24 @@ voice is cheap to re-fetch.
 To swap targets, hardlink a different speaker (no copy, no extra disk):
 
 ```sh
-rm -rf data/raw/* && mkdir -p data/raw/p226
-ln data/vctk/p226/*.wav data/raw/p226/
+rm -rf data/target/* && mkdir -p data/target/p247
+ln -f data/vctk/p247/*.wav data/target/p247/
 ```
+
+Durations of the speakers retrieved so far (`mic1` only):
+
+| speaker | utts | duration | complete? |
+|---|---|---|---|
+| p247 | 475 | 15.6 min | yes |
+| p318 | 422 | 14.3 min | yes |
+| p251 | 364 | 13.0 min | yes |
+| p334 | 423 | 12.9 min | yes |
+| p360 | 424 | 12.0 min | yes |
+| **p225** | **231** | **9.3 min** | **yes** |
+
+p225 is the conventional target but is one of the shorter speakers. RVC
+fine-tunes are usually happier with 15+ minutes, so **p247 is the better choice
+if voice identity matters more than matching published VCTK results.**
 
 ## Disk warning
 

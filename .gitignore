@@ -50,6 +50,8 @@ data/indexes/*
 data/checkpoints/*
 data/logs/*
 data/pretrained/*
+data/vctk/*
+data/target/*
 
 # Keep folder structure
 !data/raw/.gitkeep
