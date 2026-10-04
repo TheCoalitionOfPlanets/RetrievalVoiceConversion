@@ -126,6 +126,51 @@ otherwise invisible until training finishes and the output sounds wrong.
 
 Fix whatever it flags and re-run before moving on.
 
+## Using it: live mic -> your voice
+
+```sh
+uv run python scripts/live_convert.py
+```
+
+ENTER records, ENTER stops, the clip is converted and played back immediately.
+The model loads **once** and stays resident, so only the first take pays the
+~10 s startup; after that conversion runs at roughly real time (RTF ~0.8 on the
+3050).
+
+```sh
+uv run python scripts/live_convert.py --pitch 0          # same pitch
+uv run python scripts/live_convert.py --pitch -12        # drop an octave
+uv run python scripts/live_convert.py --keep-input       # also save the raw take
+uv run python scripts/live_convert.py --outdir /tmp/vc   # somewhere else
+```
+
+Outputs land in `data/outputs/out_000.wav`, `out_001.wav`, ... and numbering
+continues across runs.
+
+### Converting an existing file instead
+
+`scripts/infer.py` takes a real path — `source.wav` in the examples is a
+placeholder, not a file that exists:
+
+```sh
+uv run python scripts/infer.py \
+  --input data/reference/p247/p247_001_mic1.wav \
+  --output data/outputs/demo.wav \
+  --pitch 0
+```
+
+`--input` also accepts a directory, in which case `--output` is treated as a
+directory too.
+
+### Dialling in the result
+
+| flag | effect |
+|---|---|
+| `--pitch N` | transpose N semitones. Use when the source voice sits in a different range than yours; ±12 is an octave |
+| `--index-rate R` | 0 = ignore the retrieval index, 1 = lean on it hard. Default 0.75. Lower it if output sounds smeared, raise it if timbre drifts off |
+| `--f0-method` | `harvest` (default, robust), `dio` (faster), `crepe` (needs the `crepe` extra) |
+| `--checkpoint` | pick a specific epoch, e.g. `data/checkpoints/G_250.pth`, instead of `G_latest.pth` |
+
 ## If something goes wrong
 
 | symptom | cause |
@@ -136,6 +181,7 @@ Fix whatever it flags and re-run before moving on.
 | output sounds like p247 | stale `data/processed/` — you skipped step 3 |
 | output pitch is wrong | use `--pitch` semitones at step 9 (±12 crosses male/female) |
 | "No usable samples" | clips too short, or `data/raw/` empty |
+| `AudioLoadError: File not found: source.wav` | `source.wav` is a placeholder — pass a real path, or use `live_convert.py` |
 
 ## Keep `data/raw/` to exactly one folder
 
