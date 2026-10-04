@@ -47,11 +47,15 @@ checkpoints/
 data/raw/*
 data/processed/*
 data/indexes/*
+data/checkpoints/*
+data/logs/*
 
 # Keep folder structure
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/indexes/.gitkeep
+!data/checkpoints/.gitkeep
+!data/logs/.gitkeep
 
 # FAISS
 *.index
