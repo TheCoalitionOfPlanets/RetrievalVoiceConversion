@@ -112,3 +112,32 @@ def test_content_upsampling_factor_matches_rates(model_config):
     )
 
     assert extractor.upsample_factor == round(expected)
+
+
+def test_coarse_pitch_clamps_below_f0_min():
+    """stonemask can refine F0 under f0_min; that must not underflow the bins.
+
+    Real speech hits this (it silently dropped VCTK segments); a synthetic tone
+    sitting inside the configured range never does.
+    """
+
+    config = PitchConfig(f0_min=50.0, f0_max=1100.0)
+    extractor = PitchExtractor(config)
+
+    # Voiced but below the configured floor, plus genuine silence.
+    f0 = np.array([0.0, 10.0, 30.0, 49.9, 50.0, 220.0, 1100.0, 2000.0])
+
+    coarse = extractor.to_coarse(f0)
+
+    assert coarse.min() >= 0, f"underflowed to {coarse.min()}"
+    assert coarse.max() <= config.f0_bin - 1
+    assert coarse[0] == 0, "true silence must stay in the reserved bin"
+    assert np.all(coarse[1:] >= 1), "voiced frames must never land in bin 0"
+
+
+def test_coarse_pitch_is_monotonic_in_frequency():
+    extractor = PitchExtractor(PitchConfig())
+
+    coarse = extractor.to_coarse(np.array([60.0, 120.0, 240.0, 480.0]))
+
+    assert np.all(np.diff(coarse) > 0)

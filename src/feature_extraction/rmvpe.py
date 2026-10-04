@@ -159,7 +159,10 @@ class PitchExtractor:
             self.f0_mel_max - self.f0_mel_min
         ) + 1.0
 
+        # stonemask refines harvest's estimate and can land just under f0_min,
+        # which underflows the first bin to 0 or -1. Clamp both ends.
         scaled[f0_mel <= 0] = 1.0
+        scaled[scaled < 1.0] = 1.0
         scaled[scaled > bins - 1] = bins - 1
 
         coarse = np.rint(scaled).astype(np.int64)
