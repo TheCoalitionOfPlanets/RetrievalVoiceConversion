@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.services.conversion_service import ConversionService  # noqa: E402
+from src.utils.config import load_inference_config  # noqa: E402
 from src.utils.logger import get_logger  # noqa: E402
 
 logger = get_logger("live")
@@ -57,14 +58,26 @@ def main() -> int:
     ap.add_argument("--keep-input", action="store_true",
                     help="Also keep the raw recording next to each output")
     ap.add_argument("--rate", type=int, default=48000)
+    ap.add_argument("--checkpoint", default=None,
+                    help="e.g. data/checkpoints/G_125.pth (default: G_latest.pth)")
+    ap.add_argument("--device", default=None,
+                    help="cpu/cuda (default: auto). Use cpu to test mid-training "
+                         "without competing with the training process for VRAM")
+    ap.add_argument("--inference-config", default="config/inference.yaml")
     args = ap.parse_args()
 
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     tmp = outdir / ".input.wav"
 
+    inference_config = load_inference_config(args.inference_config)
+    if args.checkpoint:
+        inference_config.checkpoint = args.checkpoint
+    if args.device:
+        inference_config.device = args.device
+
     print("Loading model (once)...")
-    service = ConversionService().load()
+    service = ConversionService(inference_config=inference_config).load()
     print("\n" + "=" * 60)
     print(f" Ready. pitch={args.pitch:+d} semitones")
     print(" ENTER = record, ENTER again = stop. 'q' = quit.")

@@ -21,7 +21,7 @@ hubert:
   embedding_dim: 768
 
 pitch:
-  method: harvest
+  method: rmvpe
   sample_rate: 16000
   hop_length: 160
   f0_min: 50.0

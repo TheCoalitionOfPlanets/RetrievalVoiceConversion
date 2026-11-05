@@ -33,7 +33,7 @@ class FeatureExtractor:
         self.hubert = HubertExtractor(
             self.config.hubert, device=device, fp16=fp16
         )
-        self.pitch = PitchExtractor(self.config.pitch)
+        self.pitch = PitchExtractor(self.config.pitch, device=device, fp16=fp16)
 
         audio = self.config.audio
         frames_per_second = audio.sample_rate / audio.hop_length

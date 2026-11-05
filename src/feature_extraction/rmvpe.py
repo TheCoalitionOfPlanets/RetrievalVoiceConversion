@@ -1,12 +1,13 @@
 """F0 (pitch) extraction and quantisation.
 
-The name is kept for continuity with the RVC lineage, but the default engine is
-pyworld `harvest` — it needs no extra model weights and is the most robust of
-the classical estimators. `dio` is the fast option; `crepe` is available when
-the optional torchcrepe extra is installed.
+Three engines: `rmvpe` (neural, DeepUnet+BiGRU — matches upstream RVC's
+pitch accuracy, needs the rmvpe.pt checkpoint and is best on a GPU), and the
+classical pyworld estimators `harvest` (robust, no extra weights) and `dio`
+(fast). `crepe` is available when the optional torchcrepe extra is installed.
 """
 
 import numpy as np
+import torch
 
 from src.models.audio import AudioData
 from src.models.pitch import PitchFeatures
@@ -16,14 +17,22 @@ from src.utils.settings import PitchConfig
 
 logger = get_logger(__name__)
 
-SUPPORTED_METHODS = ("harvest", "dio", "crepe")
+SUPPORTED_METHODS = ("harvest", "dio", "crepe", "rmvpe")
 
 
 class PitchExtractor:
     """Produces a frame-aligned F0 contour plus its 256-bin coarse encoding."""
 
-    def __init__(self, config: PitchConfig | None = None):
+    def __init__(
+        self,
+        config: PitchConfig | None = None,
+        device: torch.device | str = "cpu",
+        fp16: bool = False,
+    ):
         self.config = config or PitchConfig()
+        self.device = torch.device(device)
+        self.fp16 = fp16
+        self._rmvpe_model = None
 
         if self.config.method not in SUPPORTED_METHODS:
             raise FeatureExtractionError(
@@ -36,7 +45,28 @@ class PitchExtractor:
         self.f0_mel_max = 1127.0 * np.log(1.0 + self.config.f0_max / 700.0)
 
     def load(self) -> "PitchExtractor":
+        if self.config.method == "rmvpe":
+            self._load_rmvpe()
+
         return self
+
+    def _load_rmvpe(self):
+        if self._rmvpe_model is not None:
+            return
+
+        from pathlib import Path
+
+        from src.feature_extraction.rmvpe_model import RMVPEModel
+
+        model_path = Path(self.config.rmvpe_model_path)
+        if not model_path.is_file():
+            raise FeatureExtractionError(
+                f"RMVPE checkpoint not found: {model_path}. "
+                "Copy rmvpe.pt there, or use --f0-method harvest."
+            )
+
+        logger.info(f"Loading RMVPE: {model_path}")
+        self._rmvpe_model = RMVPEModel(str(model_path), self.device, fp16=self.fp16)
 
     def extract(
         self,
@@ -61,6 +91,8 @@ class PitchExtractor:
             f0 = self._harvest(waveform)
         elif method == "dio":
             f0 = self._dio(waveform)
+        elif method == "rmvpe":
+            f0 = self._rmvpe(audio)
         else:
             f0 = self._crepe(audio)
 
@@ -130,6 +162,15 @@ class PitchExtractor:
         )
 
         return pitch.squeeze(0).numpy().astype(np.double)
+
+    def _rmvpe(self, audio: AudioData) -> np.ndarray:
+        self._load_rmvpe()
+
+        f0 = self._rmvpe_model.infer_from_audio(
+            audio.waveform.astype(np.float32), thred=0.03
+        )
+
+        return f0.astype(np.double)
 
     @staticmethod
     def _resize(f0: np.ndarray, num_frames: int) -> np.ndarray:

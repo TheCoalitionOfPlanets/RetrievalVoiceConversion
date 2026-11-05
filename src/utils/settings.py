@@ -47,6 +47,7 @@ class PitchConfig:
     f0_min: float = 50.0
     f0_max: float = 1100.0
     f0_bin: int = 256
+    rmvpe_model_path: str = "data/pretrained/rmvpe.pt"
 
     @classmethod
     def from_dict(cls, raw: dict) -> "PitchConfig":
