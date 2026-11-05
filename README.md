@@ -27,7 +27,7 @@ rather than tens of hours.
           │                           │                                 │
           │                      TextEncoder ◄── coarse F0 (256 bins) ──┘
           │                           │
-          └─► F0 (harvest) ───────────┴──► prior p(z | content, f0)
+          └─► F0 (rmvpe) ─────────────┴──► prior p(z | content, f0)
                    │
                    └──────────► NSF source ─► GeneratorNSF ─► waveform
                                                    │
@@ -188,6 +188,25 @@ uv run python scripts/infer.py \
 male→female, −12 the other way). `--index-rate 0..1` trades timbre strength
 against clarity.
 
+### 5. Text-to-voice (no source recording needed)
+
+`scripts/infer.py` needs a source *audio file* to supply content — there's
+no raw-audio shortcut if you just want to hear the trained voice say
+something typed. `scripts/tts_infer.py` covers that case: it synthesizes the
+text with Microsoft's neural TTS (via the free `edge-tts` client — the same
+voice models behind Edge's Read Aloud, not the paid Azure Speech API) and
+immediately feeds that synthetic audio through the trained converter as the
+source. The TTS step only supplies content and prosody to convert, same as
+any other `--input` file; it has no influence on the trained voice itself.
+
+```sh
+uv run python scripts/tts_infer.py \
+  --text "Hello there" --output out.wav --voice en-US-AndrewNeural
+```
+
+`scripts/live_chat.py` wraps the same pipeline in a Gradio chat UI that keeps
+the model loaded between turns (`uv run python scripts/live_chat.py --port 7866`).
+
 ### Everything at once
 
 ```sh
@@ -239,5 +258,8 @@ is what keeps a full GAN step inside 4 GB.
 Checkpoints embed the config they were trained with, and inference prefers it
 over the YAML, so a checkpoint stays loadable after you edit configs.
 
-F0 defaults to pyworld `harvest` (robust, no extra weights). `dio` is faster;
-`crepe` needs `uv sync --extra crepe`.
+F0 defaults to `rmvpe` (neural, DeepUnet+BiGRU over a mel spectrogram —
+accurate on expressive/noisy speech, needs `data/pretrained/rmvpe.pt` and a
+GPU for real-time use). `harvest` (pyworld, classical, no extra weights) and
+`dio` (faster, less accurate) are available with `--f0-method`; `crepe` needs
+`uv sync --extra crepe`.

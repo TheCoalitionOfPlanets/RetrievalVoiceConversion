@@ -46,6 +46,19 @@ body, .gradio-container { background: #ffffff !important; color: #111111 !import
     color: #111111 !important;
     border-color: #d0d0d0 !important;
 }
+.gradio-container .message,
+.gradio-container .message-bubble-border,
+.gradio-container .bubble,
+.gradio-container .user,
+.gradio-container .bot,
+.gradio-container [class*="message"],
+.gradio-container [class*="bubble"] {
+    background: #f0f0f2 !important;
+    color: #111111 !important;
+}
+.gradio-container .message *, .gradio-container .bubble * {
+    color: #111111 !important;
+}
 """
 
 TTS_VOICES = [
